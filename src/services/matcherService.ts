@@ -55,14 +55,7 @@ export const matchOrders = async (limitOrders: LimitOrdersAbi) => {
   }
   if (ordersToMatch.length == 0) return;
   try {
-    console.log("ordersToMatch", ordersToMatch.length);
     const chunks = splitArrayIntoChunks(ordersToMatch, 5);
-    // const data = await limitOrders
-    //   .multiCall(
-    //     ordersToMatch.map((o) => limitOrders.functions.match_orders(o.buyOrder, o.sellOrder))
-    //   )
-    //   .txParams({ gasPrice: 1 })
-    //   .call();
     const data = await Promise.all(
       chunks.map((arr) =>
         limitOrders
