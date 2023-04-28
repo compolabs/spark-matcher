@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { mongoUrl } from "./config";
-import { initMatcher, matchOrders } from "./services/matcherService";
+import { initMatcher } from "./services/matcherService";
 import { sleep } from "fuels";
 
 mongoose
