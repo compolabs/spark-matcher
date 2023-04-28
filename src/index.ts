@@ -1,9 +1,8 @@
 import mongoose from "mongoose";
-import { mongoUrl, port } from "./config";
-import { initOrderFetcherCrone } from "./crones/orderFetcherCrone";
+import { mongoUrl } from "./config";
+import { initMatcher, matchOrders } from "./services/matcherService";
+import { sleep } from "fuels";
 
-// Connect to MongoDB
-// mongoose.Promise = bluebird;
 mongoose
   .connect(mongoUrl, {
     useNewUrlParser: true,
@@ -19,4 +18,11 @@ mongoose
     // process.exit();
   });
 
-initOrderFetcherCrone()
+(async () => {
+  const limitOrdersContract = initMatcher();
+  if (limitOrdersContract == null) return;
+  while (true) {
+    // await matchOrders(limitOrdersContract);
+    await sleep(10000);
+  }
+})();
