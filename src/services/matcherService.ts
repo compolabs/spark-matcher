@@ -64,25 +64,13 @@ export const matchOrders = async (limitOrders: LimitOrdersAbi) => {
   const chunks = splitArrayIntoChunks(ordersToMatch, 5);
   for (let c = 0; c < chunks.length; c++) {
     const chunk = chunks[c];
-    await Promise.all(
-      chunk.map((o) =>
-        limitOrders.functions.match_orders(o.buyOrder, o.sellOrder).txParams({ gasPrice: 1 }).call()
-      )
-    )
+    await limitOrders
+      .multiCall(chunk.map((o) => limitOrders.functions.match_orders(o.buyOrder, o.sellOrder)))
+      .txParams({ gasPrice: 1 })
+      .call()
       .then(() => c++)
-      .catch((e) => console.log("error", e.toString().slice(0, 50)))
-      .then(() =>
-        Promise.all(
-          chunk.map((o) =>
-            limitOrders.functions
-              .match_orders(o.buyOrder, o.sellOrder)
-              .txParams({ gasPrice: 1 })
-              .call()
-          )
-        )
-          .then(() => c++)
-          .catch((e) => console.log("final error", e.toString().slice(0, 100)))
-      );
+      .catch((e) => console.log("error", e.toString().slice(0, 50)));
+
     await sleep(100);
   }
 
