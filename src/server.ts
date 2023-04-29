@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
-import { mongoUrl } from "./config";
-import { initMatcher, matchOrders } from "./services/matcherService";
-import { sleep } from "fuels";
+import { app } from "./app";
+import { mongoUrl, port } from "./config";
+import { initOrderFetcherCrone } from "./crones/orderFetcherCrone";
+import { initTradeFetcherCrone } from "./crones/tradeFetcherCrone";
 
 mongoose
   .connect(mongoUrl, {
@@ -18,13 +19,10 @@ mongoose
     // process.exit();
   });
 
-(async () => {
-  const limitOrdersContract = initMatcher();
-  if (limitOrdersContract == null) return;
-  let loop = 0;
-  while (true) {
-    await matchOrders(limitOrdersContract);
-    await sleep(10000);
-    loop++;
-  }
-})();
+initOrderFetcherCrone()
+  .then(() => initTradeFetcherCrone)
+  .then(() => {
+    app.listen(port ?? 5000, () => {
+      console.log("🚀 Server ready at: http://localhost:" + port);
+    });
+  });
