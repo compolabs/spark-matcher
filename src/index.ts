@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { mongoUrl } from "./config";
-import { initMatcher } from "./services/matcherService";
+import { initMatcher, matchOrders } from "./services/matcherService";
 import { sleep } from "fuels";
 
 mongoose
@@ -21,8 +21,10 @@ mongoose
 (async () => {
   const limitOrdersContract = initMatcher();
   if (limitOrdersContract == null) return;
+  let loop = 0;
   while (true) {
-    // await matchOrders(limitOrdersContract);
-    // await sleep(10000);
+    await matchOrders(limitOrdersContract);
+    await sleep(10000);
+    loop++;
   }
 })();

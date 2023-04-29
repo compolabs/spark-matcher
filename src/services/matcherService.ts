@@ -1,4 +1,4 @@
-import { Wallet } from "fuels";
+import { sleep, Wallet } from "fuels";
 import { contractAddress, nodeUrl, privateKey } from "../config";
 import { LimitOrdersAbi__factory } from "../constants/limitOrdersConstants/LimitOrdersAbi__factory";
 import { LimitOrdersAbi } from "../constants/limitOrdersConstants/LimitOrdersAbi";
@@ -25,12 +25,16 @@ export const matchOrders = async (limitOrders: LimitOrdersAbi) => {
       status: "Active",
       asset0: btc.assetId,
       asset1: usdc.assetId,
-    }).exec(),
+    })
+      .limit(1000)
+      .exec(),
     Order.find({
       status: "Active",
       asset0: usdc.assetId,
       asset1: btc.assetId,
-    }).exec(),
+    })
+      .limit(1000)
+      .exec(),
   ]);
   if (sellActiveOrders.length == 0 || buyActiveOrders.length == 0) return;
   for (let i = 0; i < sellActiveOrders.length; i++) {
@@ -56,23 +60,17 @@ export const matchOrders = async (limitOrders: LimitOrdersAbi) => {
   if (ordersToMatch.length == 0) return;
   try {
     const chunks = splitArrayIntoChunks(ordersToMatch, 5);
-    const data = await Promise.all(
-      chunks.map((arr) =>
-        limitOrders
-          .multiCall(arr.map((o) => limitOrders.functions.match_orders(o.buyOrder, o.sellOrder)))
-          .txParams({ gasPrice: 1 })
-          .call()
-      )
-    );
-
-    //const data = await Promise.all(
-    //       ordersToMatch.map((o) =>
-    //         limitOrders.functions.match_orders(o.buyOrder, o.sellOrder).txParams({ gasPrice: 1 }).call()
-    //       )
-    //     );
-    console.log("data", data);
+    for (let c = 0; c < chunks.length; c++) {
+      const chunk = chunks[c];
+      const res = await limitOrders
+        .multiCall(chunk.map((o) => limitOrders.functions.match_orders(o.buyOrder, o.sellOrder)))
+        .txParams({ gasPrice: 1 })
+        .call();
+      console.log(res);
+      await sleep(100);
+    }
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
   console.log("finished matching");
 };
