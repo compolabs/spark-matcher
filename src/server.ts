@@ -1,6 +1,4 @@
-import mongoose from "mongoose";
-import { contractAddress, mongoUrl, nodeUrl, privateKey } from "./config";
-import { initMatcher } from "./services/matcherService";
+import { contractAddress, nodeUrl, privateKey } from "./config";
 import { sleep, Wallet } from "fuels";
 import OrdersFetcher from "./services/ordersFetcher";
 import { initMongo } from "./services/mongoService";
