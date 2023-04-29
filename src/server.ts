@@ -1,8 +1,7 @@
 import mongoose from "mongoose";
-import { app } from "./app";
-import { mongoUrl, port } from "./config";
-import { initOrderFetcherCrone } from "./crones/orderFetcherCrone";
-import { initTradeFetcherCrone } from "./crones/tradeFetcherCrone";
+import { mongoUrl } from "./config";
+import { initMatcher, matchOrders } from "./services/matcherService";
+import { sleep } from "fuels";
 
 mongoose
   .connect(mongoUrl, {
@@ -18,11 +17,13 @@ mongoose
     console.log(`❌  MongoDB connection error. Please make sure MongoDB is running. ${err}`);
     // process.exit();
   });
-
-initOrderFetcherCrone()
-  .then(() => initTradeFetcherCrone)
-  .then(() => {
-    app.listen(port ?? 5000, () => {
-      console.log("🚀 Server ready at: http://localhost:" + port);
-    });
-  });
+(async () => {
+  const limitOrdersContract = initMatcher();
+  if (limitOrdersContract == null) return;
+  let loop = 0;
+  while (true) {
+    await matchOrders(limitOrdersContract);
+    await sleep(10000);
+    loop++;
+  }
+})();

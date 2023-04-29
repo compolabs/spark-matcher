@@ -9,7 +9,7 @@ import BN from "../utils/BN";
 
 class OrdersFetcher {
   limitOrdersContract: LimitOrdersAbi;
-  initialized: boolean = false;
+  initialized = false;
 
   constructor() {
     const provider = new Provider(nodeUrl);
