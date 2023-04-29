@@ -43,8 +43,8 @@ export const matchOrders = async (limitOrders: LimitOrdersAbi) => {
     const orderA = sellActiveOrders[i];
     for (let j = 0; j < buyActiveOrders.length; j++) {
       const orderB = buyActiveOrders[j];
-      const buyOrderPrice = new BN(orderB.price);
-      const sellOrderPrice = new BN(orderA.price);
+      const buyOrderPrice = BN.ZERO; //new BN(orderB.price);
+      const sellOrderPrice = BN.ZERO; //new BN(orderA.price);
       if (
         buyOrderPrice.gte(sellOrderPrice) &&
         !fulfilledSellOrders.includes(orderA.id) &&
