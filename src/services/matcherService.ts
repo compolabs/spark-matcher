@@ -26,6 +26,7 @@ export const matchOrders = async (limitOrders: LimitOrdersAbi) => {
       asset0: btc.assetId,
       asset1: usdc.assetId,
     })
+      .sort({ price: 1 })
       .limit(1000)
       .exec(),
     Order.find({
@@ -33,6 +34,7 @@ export const matchOrders = async (limitOrders: LimitOrdersAbi) => {
       asset0: usdc.assetId,
       asset1: btc.assetId,
     })
+      .sort({ price: -1 })
       .limit(1000)
       .exec(),
   ]);
@@ -58,19 +60,31 @@ export const matchOrders = async (limitOrders: LimitOrdersAbi) => {
     }
   }
   if (ordersToMatch.length == 0) return;
-  try {
-    const chunks = splitArrayIntoChunks(ordersToMatch, 5);
-    for (let c = 0; c < chunks.length; c++) {
-      const chunk = chunks[c];
-      const res = await limitOrders
-        .multiCall(chunk.map((o) => limitOrders.functions.match_orders(o.buyOrder, o.sellOrder)))
-        .txParams({ gasPrice: 1 })
-        .call();
-      console.log(res);
-      await sleep(100);
-    }
-  } catch (e) {
-    console.error(e);
+
+  const chunks = splitArrayIntoChunks(ordersToMatch, 5);
+  for (let c = 0; c < chunks.length; c++) {
+    const chunk = chunks[c];
+    await Promise.all(
+      chunk.map((o) =>
+        limitOrders.functions.match_orders(o.buyOrder, o.sellOrder).txParams({ gasPrice: 1 }).call()
+      )
+    )
+      .then(() => c++)
+      .catch((e) => console.log("error", e.toString().slice(0, 50)))
+      .then(() =>
+        Promise.all(
+          chunk.map((o) =>
+            limitOrders.functions
+              .match_orders(o.buyOrder, o.sellOrder)
+              .txParams({ gasPrice: 1 })
+              .call()
+          )
+        )
+          .then(() => c++)
+          .catch((e) => console.log("final error", e.toString().slice(0, 100)))
+      );
+    await sleep(100);
   }
+
   console.log("finished matching");
 };
