@@ -1,10 +1,11 @@
-import { contractAddress, nodeUrl, privateKey } from "./config";
+import { contractAddress, nodeUrl, port, privateKey } from "./config";
 import { sleep, Wallet } from "fuels";
 import OrdersFetcher from "./services/ordersFetcher";
 import { initMongo } from "./services/mongoService";
 import { LimitOrdersAbi__factory } from "./constants/limitOrdersConstants/LimitOrdersAbi__factory";
 import { schedule } from "node-cron";
 import { Order } from "./models/Order";
+import { app } from "./app";
 
 class SparkMatcher {
   private fetcher = new OrdersFetcher();
@@ -61,3 +62,7 @@ class SparkMatcher {
 
 const matcher = new SparkMatcher();
 matcher.run("*/30 * * * * *");
+
+app.listen(port ?? 5000, () => {
+  console.log("🚀 Server ready at: http://localhost:" + port);
+});
