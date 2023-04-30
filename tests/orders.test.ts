@@ -7,7 +7,13 @@ describe("items", () => {
   it("test", async () => {
     // console.log(await Order.count());
     // console.log(await Order.count());
-    console.log(await Order.find({ id: 1 }));
+    //activeOrders[i].status === "Active" &&
+    //             activeOrders[j].status === "Active"
+    console.log(
+      await Order.findOne({ id: 1 })
+        .select({ _id: false, status: true })
+        .then((order) => order?.status === "Active")
+    );
   });
   it("print db", async () => {
     const orders = await Order.find({});
