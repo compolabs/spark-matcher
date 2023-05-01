@@ -56,7 +56,7 @@ class SparkMatcher {
         }
       }
     }
-    console.log("🏁 Job start");
+    console.log("🏁 Job finish");
   };
 }
 
