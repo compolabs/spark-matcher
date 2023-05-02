@@ -6,18 +6,33 @@ import { LimitOrdersAbi__factory } from "./constants/limitOrdersConstants/LimitO
 import { schedule } from "node-cron";
 import { Order } from "./models/Order";
 import { app } from "./app";
-
+enum STATUS {
+  RUNNING,
+  CHILLED,
+}
 class SparkMatcher {
   private fetcher = new OrdersFetcher();
   private wallet = Wallet.fromPrivateKey(privateKey, nodeUrl);
   private limitOrdersContract = LimitOrdersAbi__factory.connect(contractAddress, this.wallet);
   private initialized = false;
-
+  private status = STATUS.CHILLED;
   run(cronExpression: string) {
     initMongo()
       .then(this.fetcher.init)
       .then(() => (this.initialized = true))
-      .then(() => schedule(cronExpression, () => this.doMatch().then(this.fetcher.sync)).start());
+      .then(() =>
+        schedule(cronExpression, async () => {
+          if (this.status === STATUS.CHILLED) {
+            this.status = STATUS.RUNNING;
+            this.doMatch()
+              .then(this.fetcher.sync)
+              .catch(console.log)
+              .finally(() => (this.status = STATUS.CHILLED));
+          } else {
+            console.log("🍃 Job already running, skip");
+          }
+        }).start()
+      );
   }
 
   public doMatch = async () => {
@@ -59,12 +74,13 @@ class SparkMatcher {
       }
     }
     await Promise.all(promises);
+
     console.log("🏁 Job finish");
   };
 }
 
 const matcher = new SparkMatcher();
-matcher.run("*/30 * * * * *");
+matcher.run("*/5 * * * * *");
 
 app.listen(port ?? 5000, () => {
   console.log("🚀 Server ready at: http://localhost:" + port);
