@@ -22,22 +22,24 @@ class SparkMatcher {
 
   public doMatch = async () => {
     console.log("🛫 Job start");
+    const promises = [];
     if (!this.initialized) throw new Error("SparkMatcher is not initialized");
     const activeOrders = this.fetcher.activeOrders;
     for (let i in activeOrders) {
       for (let j in activeOrders) {
         const [order0, order1] = [activeOrders[i], activeOrders[j]];
-        const isActive = (id: number) =>
-          Order.findOne({ id })
-            .select({ _id: false, status: true })
-            .then((order) => order?.status === "Active");
         if (
-          (order0.type === "BUY" && order1.type === "SELL" && order1.price <= order0.price) ||
-          (order1.type === "BUY" && order0.type === "SELL" && order0.price <= order1.price)
+          ((order0.type === "BUY" && order1.type === "SELL" && order1.price <= order0.price) ||
+            (order1.type === "BUY" && order0.type === "SELL" && order0.price <= order1.price)) &&
+          order0.status === "Active" &&
+          order1.status === "Active"
         ) {
-          const res = await Promise.all([isActive(order0.id), isActive(order1.id)]);
-          if (res.every((v) => v)) {
-            this.limitOrdersContract.functions
+          await sleep(1);
+          const isOrdersActive = await Order.find({ id: { $in: [order0.id, order1.id] } })
+            .select({ _id: false, status: true })
+            .then((orders) => orders.length === 2 && orders.every((o) => o.status === "Active"));
+          if (isOrdersActive) {
+            const promise = this.limitOrdersContract.functions
               .match_orders(order0.id, order1.id)
               .txParams({ gasPrice: 1 })
               .call()
@@ -51,11 +53,12 @@ class SparkMatcher {
                   console.log(`❌ ${order0.id} + ${order1.id}: ${e.toString()}`);
                 }
               });
-            await sleep(10);
+            promises.push(promise);
           }
         }
       }
     }
+    await Promise.all(promises);
     console.log("🏁 Job finish");
   };
 }
