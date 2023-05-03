@@ -1,5 +1,5 @@
 import { contractAddress, nodeUrl, port, privateKey } from "./config";
-import { sleep, Wallet } from "fuels";
+import { Wallet } from "fuels";
 import { initMongo } from "./services/mongoService";
 import { LimitOrdersAbi__factory } from "./constants/limitOrdersConstants/LimitOrdersAbi__factory";
 import { schedule } from "node-cron";
