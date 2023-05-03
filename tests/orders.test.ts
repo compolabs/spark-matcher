@@ -1,9 +1,24 @@
 import { initMongo } from "../src/services/mongoService";
 import { Order } from "../src/models/Order";
+import { Wallet } from "fuels";
+import { contractAddress, nodeUrl, privateKey } from "../src/config";
+import { LimitOrdersAbi__factory } from "../src/constants/limitOrdersConstants/LimitOrdersAbi__factory";
 
 describe("items", () => {
   beforeAll(() => initMongo());
-
+  it("🚑 Emergency cancel of orders", async () => {
+    const orders = await Order.find({
+      status: "Active",
+      owner: "0x2ce05bde9ada2d2c58b5eb9f08be34df19375d618626c324f75dfdbd226c8d88",
+    });
+    const wallet = Wallet.fromPrivateKey(privateKey, nodeUrl);
+    const limitOrdersContract = LimitOrdersAbi__factory.connect(contractAddress, wallet);
+    await Promise.all(
+      orders.map((o) =>
+        limitOrdersContract.functions.cancel_order(o.id).txParams({ gasPrice: 1 }).call()
+      )
+    );
+  });
   it("test", async () => {
     // console.log(await Order.count());
     // console.log(await Order.count());
