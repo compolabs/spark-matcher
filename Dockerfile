@@ -1,20 +1,15 @@
-# Используем более новую базовую версию Node.js
-FROM node:16-slim
+FROM node:18-alpine
 
-# Создаем директорию приложения и назначаем права пользователя 'node'
-WORKDIR /home/node/app
-RUN mkdir dist && chown -R node:node /home/node/app
+WORKDIR /usr/src/app
 
-# Копируем файлы проекта
-COPY --chown=node:node . .
+COPY package*.json ./
 
-# Устанавливаем зависимости
-USER node
-RUN npm install
+RUN npm i
 
-# Собираем проект
+COPY . .
+
 RUN npm run build
 
-# Открываем порт и указываем команду для запуска
-EXPOSE 5000
-CMD ["node", "dist/server.js"]
+EXPOSE 3000
+
+CMD [ "node", "dist/server.js" ]
