@@ -7,7 +7,7 @@ import { sleep } from "fuels";
 
 export const NETWORK = {
   name: "Fuel",
-  url: "https://beta-5.fuel.network/graphql",
+  url: "https://beta-5.fuel.network/graphql"
 };
 
 class SparkMatcher {
@@ -32,16 +32,16 @@ class SparkMatcher {
 
   public doMatch = async () => {
     const baseToken = TOKENS_BY_SYMBOL[MARKET].assetId;
-    let [buyOrders, sellOrders]: [any[], any[]] = await Promise.all([
+    const [buyOrders, sellOrders]: [any[], any[]] = await Promise.all([
       this.sdk.fetchSpotOrders({ baseToken, limit: 100, orderType: "buy", isOpened: true }),
-      this.sdk.fetchSpotOrders({ baseToken, limit: 100, orderType: "sell", isOpened: true }),
+      this.sdk.fetchSpotOrders({ baseToken, limit: 100, orderType: "sell", isOpened: true })
     ]);
 
     for (let i = 0; i < sellOrders.length; ++i) {
-      let sellOrder = sellOrders[i];
+      const sellOrder = sellOrders[i];
       if (sellOrder.baseSize.eq(0)) continue;
       for (let j = 0; j < buyOrders.length; ++j) {
-        let buyOrder = buyOrders[j];
+        const buyOrder = buyOrders[j];
         if (buyOrder.baseSize.eq(0)) continue;
         if (
           sellOrder.baseToken === buyOrder.baseToken &&
@@ -69,7 +69,7 @@ class SparkMatcher {
               buyOrders[i].baseSize = buyOrder.baseSize;
             })
             .then(() => console.log("Orders matched ", sellOrder.id, buyOrder.id))
-            .catch((e) => console.error(e.toString()));
+            .catch((e) => console.error(sellOrder.id, buyOrder.id, "\n", e.toString(), "\n"));
         }
       }
     }
