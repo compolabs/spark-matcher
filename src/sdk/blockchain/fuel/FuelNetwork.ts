@@ -1,4 +1,4 @@
-import { Provider, Wallet } from "fuels";
+import { getDecodedLogs, Provider, Wallet, WalletLocked } from "fuels";
 import { makeObservable } from "mobx";
 import { Nullable } from "tsdef";
 
@@ -16,8 +16,15 @@ import {
 } from "../types";
 
 import { Api } from "./Api";
-import { NETWORKS, TOKENS_BY_ASSET_ID, TOKENS_BY_SYMBOL, TOKENS_LIST } from "./constants";
+import {
+  CONTRACT_ADDRESSES,
+  NETWORKS,
+  TOKENS_BY_ASSET_ID,
+  TOKENS_BY_SYMBOL,
+  TOKENS_LIST,
+} from "./constants";
 import { WalletManager } from "./WalletManager";
+import { OrderbookAbi__factory } from "./types/orderbook";
 
 export class FuelNetwork extends BlockchainNetwork {
   NETWORK_TYPE = NETWORK.FUEL;
@@ -35,6 +42,14 @@ export class FuelNetwork extends BlockchainNetwork {
     makeObservable(this.walletManager);
 
     this.providerPromise = Provider.create(NETWORKS[0].url);
+  }
+
+  decodeSpotReceipts(receipts: any[]) {
+    const orderbookFactory = OrderbookAbi__factory.connect(
+      CONTRACT_ADDRESSES.spotMarket,
+      this.walletManager.wallet!
+    );
+    return getDecodedLogs(receipts, orderbookFactory.interface);
   }
 
   getAddress = (): Nullable<string> => {
