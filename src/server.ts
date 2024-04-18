@@ -1,15 +1,9 @@
 import { MARKET, PORT, PRIVATE_KEY } from "./config";
 import { app } from "./app";
-import { CONTRACT_ADDRESSES, TOKENS_BY_SYMBOL } from "./sdk/blockchain/fuel/constants";
-import { FuelNetwork } from "./sdk/blockchain/fuel";
-import { sleep } from "fuels";
-import { OrderbookAbi__factory } from "./sdk/blockchain/fuel/types/orderbook";
-import BN from "./sdk/utils/BN";
-
-export const NETWORK = {
-  name: "Fuel",
-  url: "https://beta-5.fuel.network/graphql",
-};
+import { Wallet, sleep } from "fuels";
+import Spark, { BN } from "spark-ts-sdk";
+import { NETWORK, CONTRACT_ADDRESSES, INDEXER_URL, TOKENS_BY_SYMBOL } from "./constants";
+import { SpotOrder } from "spark-ts-sdk/dist/interface";
 
 enum STATUS {
   ACTIVE,
@@ -17,13 +11,21 @@ enum STATUS {
 }
 
 class SparkMatcher {
-  sdk: FuelNetwork;
+  sdk: Spark;
   initialized = false;
   private status = STATUS.CHILL;
 
   constructor() {
-    this.sdk = new FuelNetwork();
-    this.sdk.connectWalletByPrivateKey(PRIVATE_KEY).then(() => (this.initialized = true));
+    const wallet = Wallet.fromPrivateKey(PRIVATE_KEY);
+
+    this.sdk = new Spark({
+      networkUrl: NETWORK.url,
+      contractAddresses: CONTRACT_ADDRESSES,
+      indexerApiUrl: INDEXER_URL,
+      wallet,
+    });
+
+    this.initialized = true;
   }
 
   run() {
@@ -57,69 +59,138 @@ class SparkMatcher {
   }
 
   public doMatch = async () => {
-    const baseToken = TOKENS_BY_SYMBOL[MARKET].assetId;
-    const [buyOrders, sellOrders]: [any[], any[]] = await Promise.all([
-      this.sdk.fetchSpotOrders({ baseToken, limit: 100, orderType: "buy", isOpened: true }),
-      this.sdk.fetchSpotOrders({ baseToken, limit: 100, orderType: "sell", isOpened: true }),
+    const baseToken = TOKENS_BY_SYMBOL[MARKET].address;
+
+    const [buyOrders, sellOrders] = await Promise.all([
+      this.sdk.fetchSpotOrders({ baseToken, limit: 100, type: "BUY", isActive: true }),
+      this.sdk.fetchSpotOrders({ baseToken, limit: 100, type: "SELL", isActive: true }),
     ]);
 
-    for (let i = 0; i < sellOrders.length; ++i) {
+    // for (let i = 0; i < sellOrders.length; ++i) {
+    //   const sellOrder = sellOrders[i];
+    //   if (sellOrder.baseSize.eq(0)) continue;
+    //   for (let j = 0; j < buyOrders.length; ++j) {
+    //     const buyOrder = buyOrders[j];
+    //     if (buyOrder.baseSize.eq(0)) continue;
+    //     if (
+    //       sellOrder.baseToken === buyOrder.baseToken &&
+    //       sellOrder.orderPrice.lte(buyOrder.orderPrice) &&
+    //       sellOrder.baseSize.lt(0) &&
+    //       buyOrder.baseSize.gt(0)
+    //     ) {
+    //       const [sell_res, buy_res] = await Promise.all([
+    //         this.sdk.fetchSpotOrderById(sellOrder.id),
+    //         this.sdk.fetchSpotOrderById(buyOrder.id),
+    //       ]);
+
+    //       if (sell_res == null) {
+    //         console.log("👽 Phantom orders: " + sellOrder.id);
+    //         sellOrders[i].baseSize = new BN(0); // ?
+    //         continue;
+    //       }
+    //       if (buy_res == null) {
+    //         console.log("👽 Phantom orders: " + buyOrder.id);
+    //         buyOrders[i].baseSize = new BN(0); // ?
+    //         continue;
+    //       }
+    //       await this.sdk
+    //         .matchSpotOrders(sellOrder.id, buyOrder.id)
+    //         // ?
+    //         .then(() => {
+    //           const amount =
+    //             sellOrder.baseSize > buyOrder.baseSize ? buyOrder.baseSize : sellOrder.baseSize;
+
+    //           sellOrder.baseSize = sellOrder.baseSize.minus(amount);
+    //           sellOrders[i].baseSize = sellOrder.baseSize;
+
+    //           buyOrder.baseSize = buyOrder.baseSize.minus(amount);
+    //           buyOrders[i].baseSize = buyOrder.baseSize;
+    //         })
+    //         .then(() => console.log("✅ Orders matched ", sellOrder.id, buyOrder.id, "\n"))
+    //         .catch((e) => {
+    //           // console.log(this.sdk.decodeSpotReceipts([e.receipt]));
+    //           console.error(sellOrder.id, buyOrder.id, "\n", e.toString(), "\n");
+    //         });
+    //       await sleep(100);
+    //     }
+    //   }
+    // }
+
+    await this.matchOrders(sellOrders, buyOrders);
+  };
+
+  private matchOrders = async (sellOrders: SpotOrder[], buyOrders: SpotOrder[]) => {
+    sellOrders.sort((a, b) => {
+      if (a.orderPrice.lt(b.orderPrice)) return -1;
+      if (a.orderPrice.gt(b.orderPrice)) return 1;
+      return 0;
+    });
+    buyOrders.sort((a, b) => {
+      if (a.orderPrice.gt(b.orderPrice)) return -1;
+      if (a.orderPrice.lt(b.orderPrice)) return 1;
+      return 0;
+    });
+
+    let i = 0;
+    let j = 0;
+
+    while (i < sellOrders.length && j < buyOrders.length) {
       const sellOrder = sellOrders[i];
-      if (sellOrder.baseSize.eq(0)) continue;
-      for (let j = 0; j < buyOrders.length; ++j) {
-        const buyOrder = buyOrders[j];
-        if (buyOrder.baseSize.eq(0)) continue;
-        if (
-          sellOrder.baseToken === buyOrder.baseToken &&
-          sellOrder.price.lte(buyOrder.price) &&
-          sellOrder.type === "SELL" &&
-          buyOrder.type === "BUY" &&
-          sellOrder.baseSize.gt(0) &&
-          buyOrder.baseSize.gt(0)
-        ) {
-          const orderbookFactory = OrderbookAbi__factory.connect(
-            CONTRACT_ADDRESSES.spotMarket,
-            this.sdk.walletManager.wallet!
-          );
+      const buyOrder = buyOrders[j];
+
+      if (sellOrder.baseSize.eq(0)) {
+        i++;
+        continue;
+      }
+      if (buyOrder.baseSize.eq(0)) {
+        j++;
+        continue;
+      }
+
+      if (sellOrder.orderPrice.lte(buyOrder.orderPrice)) {
+        try {
           const [sell_res, buy_res] = await Promise.all([
-            orderbookFactory.functions.order_by_id(sellOrder.id).simulate(),
-            orderbookFactory.functions.order_by_id(buyOrder.id).simulate(),
-          ]).then((res) => res.map((res) => decodeOrder(res.value)));
+            this.sdk.fetchSpotOrderById(sellOrder.id),
+            this.sdk.fetchSpotOrderById(buyOrder.id),
+          ]);
 
-          if (sell_res == null) {
+          if (!sell_res) {
             console.log("👽 Phantom orders: " + sellOrder.id);
-            sellOrders[i].baseSize = new BN(0);
+            sellOrder.baseSize = new BN(0); // ?
+            i++;
             continue;
           }
-          if (buy_res == null) {
-            console.log("👽 Phantom orders: " + buyOrder.id);
-            buyOrders[i].baseSize = new BN(0);
+          if (!buy_res) {
+            console.log("👽 Phantom orders: " + sellOrder.id);
+            buyOrder.baseSize = new BN(0); // ?
+            j++;
             continue;
           }
-          await this.sdk.api
-            .matchSpotOrders(
-              sellOrder.id,
-              buyOrder.id,
-              this.sdk.walletManager.wallet!,
-              CONTRACT_ADDRESSES.spotMarket
-            )
-            .then(() => {
-              const amount =
-                sellOrder.baseSize > buyOrder.baseSize ? buyOrder.baseSize : sellOrder.baseSize;
-
-              sellOrder.baseSize = sellOrder.baseSize.minus(amount);
-              sellOrders[i].baseSize = sellOrder.baseSize;
-
-              buyOrder.baseSize = buyOrder.baseSize.minus(amount);
-              buyOrders[i].baseSize = buyOrder.baseSize;
-            })
-            .then(() => console.log("✅ Orders matched ", sellOrder.id, buyOrder.id, "\n"))
-            .catch((e) => {
-              // console.log(this.sdk.decodeSpotReceipts([e.receipt]));
-              console.error(sellOrder.id, buyOrder.id, "\n", e.toString(), "\n");
-            });
-          await sleep(100);
+        } catch (e) {
+          console.error(`Error fetching orders ${sellOrder.id} and ${buyOrder.id}: ${e}`);
+          continue;
         }
+
+        try {
+          await this.sdk.matchSpotOrders(sellOrder.id, buyOrder.id);
+          const matchAmount = sellOrder.baseSize.gt(buyOrder.baseSize)
+            ? buyOrder.baseSize
+            : sellOrder.baseSize;
+
+          sellOrder.baseSize = sellOrder.baseSize.minus(matchAmount);
+          buyOrder.baseSize = buyOrder.baseSize.minus(matchAmount);
+
+          if (sellOrder.baseSize.eq(0)) {
+            i++;
+          }
+          if (buyOrder.baseSize.eq(0)) {
+            j++;
+          }
+        } catch (e) {
+          console.error(`Error matching orders ${sellOrder.id} and ${buyOrder.id}: ${e}`);
+        }
+      } else {
+        break;
       }
     }
   };
@@ -148,15 +219,3 @@ const print = `
 🚀 Server ready at: http://localhost:${port}
 `;
 app.listen(PORT ?? 5000, () => console.log(print));
-
-function decodeOrder(order: any) {
-  return order != null
-    ? {
-        id: order.id,
-        trader: order.trader.value,
-        base_token: order.base_token.value,
-        base_size: (order.base_size.negative ? "-" : "") + order.base_size.value.toString(),
-        base_price: order.base_price.toString(),
-      }
-    : null;
-}

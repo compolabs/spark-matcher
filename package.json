@@ -52,13 +52,14 @@
     "errorhandler": "^1.5.1",
     "ethers": "^6.10.0",
     "express": "^4.18.2",
-    "fuels": "^0.77.0",
+    "fuels": "^0.79.0",
     "graphql": "^16.8.1",
     "jest": "^29.0.3",
     "mobx": "^6.12.3",
     "node-cron": "^3.0.2",
     "request": "^2.88.2",
     "ts-jest": "^29.0.1",
-    "tsdef": "^0.0.14"
+    "tsdef": "^0.0.14",
+    "spark-ts-sdk": "git+https://github.com/compolabs/spark-ts-sdk#626bf0c6ee0aa92b8bd733c312df3ee104d61988"
   }
 }
