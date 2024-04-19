@@ -20,6 +20,7 @@ class SparkMatcher {
   sdk: FuelNetwork;
   initialized = false;
   private status = STATUS.CHILL;
+  fails: Record<string, number> = {};
 
   constructor() {
     this.sdk = new FuelNetwork();
@@ -57,6 +58,11 @@ class SparkMatcher {
   }
 
   public doMatch = async () => {
+    const orderbookFactory = OrderbookAbi__factory.connect(
+      CONTRACT_ADDRESSES.spotMarket,
+      this.sdk.walletManager.wallet!
+    );
+
     const baseToken = TOKENS_BY_SYMBOL[MARKET].assetId;
     const [buyOrders, sellOrders]: [any[], any[]] = await Promise.all([
       this.sdk.fetchSpotOrders({ baseToken, limit: 100, orderType: "buy", isOpened: true }),
@@ -66,6 +72,20 @@ class SparkMatcher {
     for (let i = 0; i < sellOrders.length; ++i) {
       const sellOrder = sellOrders[i];
       if (sellOrder.baseSize.eq(0)) continue;
+      // const sell_res = await orderbookFactory.functions
+      //   .order_by_id(sellOrder.id)
+      //   .simulate()
+      //   .then((res) => decodeOrder(res.value));
+      // if (sell_res == null) {
+      //   console.log("👽 Phantom order sell: " + sellOrder.id);
+      //   sellOrders[i].baseSize = new BN(0);
+      //   this.fails[sellOrder.id] = (this.fails[sellOrder.id] ?? 0) + 1;
+      //   continue;
+      // }
+      if (this.fails[sellOrder.id] > 5) {
+        // console.log("⚠️ skipped because of a lot of fails");
+        continue;
+      }
       for (let j = 0; j < buyOrders.length; ++j) {
         const buyOrder = buyOrders[j];
         if (buyOrder.baseSize.eq(0)) continue;
@@ -77,23 +97,26 @@ class SparkMatcher {
           sellOrder.baseSize.gt(0) &&
           buyOrder.baseSize.gt(0)
         ) {
-          const orderbookFactory = OrderbookAbi__factory.connect(
-            CONTRACT_ADDRESSES.spotMarket,
-            this.sdk.walletManager.wallet!
-          );
+          if (this.fails[buyOrder.id] > 5 || this.fails[sellOrder.id] > 5) {
+            // console.log("⚠️ skipped because of a lot of fails");
+            continue;
+          }
+
           const [sell_res, buy_res] = await Promise.all([
             orderbookFactory.functions.order_by_id(sellOrder.id).simulate(),
             orderbookFactory.functions.order_by_id(buyOrder.id).simulate(),
           ]).then((res) => res.map((res) => decodeOrder(res.value)));
 
-          if (sell_res == null) {
-            console.log("👽 Phantom orders: " + sellOrder.id);
-            sellOrders[i].baseSize = new BN(0);
+          if (buy_res == null) {
+            console.log("👽 Phantom order buy: " + buyOrder.id);
+            buyOrders[i].baseSize = new BN(0);
+            this.fails[buyOrder.id] = (this.fails[buyOrder.id] ?? 0) + 1;
             continue;
           }
-          if (buy_res == null) {
-            console.log("👽 Phantom orders: " + buyOrder.id);
-            buyOrders[i].baseSize = new BN(0);
+          if (sell_res == null) {
+            console.log("👽 Phantom order sell: " + sellOrder.id);
+            sellOrders[i].baseSize = new BN(0);
+            this.fails[sellOrder.id] = (this.fails[sellOrder.id] ?? 0) + 1;
             continue;
           }
           await this.sdk.api
@@ -115,10 +138,13 @@ class SparkMatcher {
             })
             .then(() => console.log("✅ Orders matched ", sellOrder.id, buyOrder.id, "\n"))
             .catch((e) => {
-              // console.log(this.sdk.decodeSpotReceipts([e.receipt]));
-              console.error(sellOrder.id, buyOrder.id, "\n", e.toString(), "\n");
+              console.error(e.toString(), "\n");
+              console.log(sell_res, buy_res);
+              this.fails[sellOrder.id] = (this.fails[sellOrder.id] ?? 0) + 1;
+              this.fails[buyOrder.id] = (this.fails[buyOrder.id] ?? 0) + 1;
             });
           await sleep(100);
+          this.fails = {};
         }
       }
     }
