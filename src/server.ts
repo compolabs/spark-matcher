@@ -14,6 +14,7 @@ class SparkMatcher {
   sdk: Spark;
   initialized = false;
   private status = STATUS.CHILL;
+  fails: Record<string, number> = {};
 
   constructor() {
     const wallet = Wallet.fromPrivateKey(PRIVATE_KEY);
@@ -60,61 +61,83 @@ class SparkMatcher {
 
   public doMatch = async () => {
     const baseToken = TOKENS_BY_SYMBOL[MARKET].address;
-
     const [buyOrders, sellOrders] = await Promise.all([
       this.sdk.fetchSpotOrders({ baseToken, limit: 100, type: "BUY", isActive: true }),
       this.sdk.fetchSpotOrders({ baseToken, limit: 100, type: "SELL", isActive: true }),
     ]);
 
-    // for (let i = 0; i < sellOrders.length; ++i) {
-    //   const sellOrder = sellOrders[i];
-    //   if (sellOrder.baseSize.eq(0)) continue;
-    //   for (let j = 0; j < buyOrders.length; ++j) {
-    //     const buyOrder = buyOrders[j];
-    //     if (buyOrder.baseSize.eq(0)) continue;
-    //     if (
-    //       sellOrder.baseToken === buyOrder.baseToken &&
-    //       sellOrder.orderPrice.lte(buyOrder.orderPrice) &&
-    //       sellOrder.baseSize.lt(0) &&
-    //       buyOrder.baseSize.gt(0)
-    //     ) {
-    //       const [sell_res, buy_res] = await Promise.all([
-    //         this.sdk.fetchSpotOrderById(sellOrder.id),
-    //         this.sdk.fetchSpotOrderById(buyOrder.id),
-    //       ]);
+    for (let i = 0; i < sellOrders.length; ++i) {
+      const sellOrder = sellOrders[i];
+      if (sellOrder.baseSize.eq(0)) continue;
+      // const sell_res = await orderbookFactory.functions
+      //   .order_by_id(sellOrder.id)
+      //   .simulate()
+      //   .then((res) => decodeOrder(res.value));
+      // if (sell_res == null) {
+      //   console.log("👽 Phantom order sell: " + sellOrder.id);
+      //   sellOrders[i].baseSize = new BN(0);
+      //   this.fails[sellOrder.id] = (this.fails[sellOrder.id] ?? 0) + 1;
+      //   continue;
+      // }
+      if (this.fails[sellOrder.id] > 5) {
+        // console.log("⚠️ skipped because of a lot of fails");
+        continue;
+      }
+      for (let j = 0; j < buyOrders.length; ++j) {
+        const buyOrder = buyOrders[j];
+        if (buyOrder.baseSize.eq(0)) continue;
+        if (
+          sellOrder.baseToken === buyOrder.baseToken &&
+          sellOrder.orderPrice.lte(buyOrder.orderPrice) &&
+          sellOrder.baseSize.lt(0) &&
+          buyOrder.baseSize.gt(0)
+        ) {
+          if (this.fails[buyOrder.id] > 5 || this.fails[sellOrder.id] > 5) {
+            // console.log("⚠️ skipped because of a lot of fails");
+            continue;
+          }
 
-    //       if (sell_res == null) {
-    //         console.log("👽 Phantom orders: " + sellOrder.id);
-    //         sellOrders[i].baseSize = new BN(0); // ?
-    //         continue;
-    //       }
-    //       if (buy_res == null) {
-    //         console.log("👽 Phantom orders: " + buyOrder.id);
-    //         buyOrders[i].baseSize = new BN(0); // ?
-    //         continue;
-    //       }
-    //       await this.sdk
-    //         .matchSpotOrders(sellOrder.id, buyOrder.id)
-    //         // ?
-    //         .then(() => {
-    //           const amount =
-    //             sellOrder.baseSize > buyOrder.baseSize ? buyOrder.baseSize : sellOrder.baseSize;
+          const [sell_res, buy_res] = await Promise.all([
+            this.sdk.fetchSpotOrderById(sellOrder.id),
+            this.sdk.fetchSpotOrderById(buyOrder.id),
+          ]);
 
-    //           sellOrder.baseSize = sellOrder.baseSize.minus(amount);
-    //           sellOrders[i].baseSize = sellOrder.baseSize;
+          if (buy_res == null) {
+            console.log("👽 Phantom order buy: " + buyOrder.id);
+            buyOrders[i].baseSize = new BN(0);
+            this.fails[buyOrder.id] = (this.fails[buyOrder.id] ?? 0) + 1;
+            continue;
+          }
+          if (sell_res == null) {
+            console.log("👽 Phantom order sell: " + sellOrder.id);
+            sellOrders[i].baseSize = new BN(0);
+            this.fails[sellOrder.id] = (this.fails[sellOrder.id] ?? 0) + 1;
+            continue;
+          }
+          await this.sdk
+            .matchSpotOrders(sellOrder.id, buyOrder.id)
+            .then(() => {
+              const amount =
+                sellOrder.baseSize > buyOrder.baseSize ? buyOrder.baseSize : sellOrder.baseSize;
 
-    //           buyOrder.baseSize = buyOrder.baseSize.minus(amount);
-    //           buyOrders[i].baseSize = buyOrder.baseSize;
-    //         })
-    //         .then(() => console.log("✅ Orders matched ", sellOrder.id, buyOrder.id, "\n"))
-    //         .catch((e) => {
-    //           // console.log(this.sdk.decodeSpotReceipts([e.receipt]));
-    //           console.error(sellOrder.id, buyOrder.id, "\n", e.toString(), "\n");
-    //         });
-    //       await sleep(100);
-    //     }
-    //   }
-    // }
+              sellOrder.baseSize = sellOrder.baseSize.minus(amount);
+              sellOrders[i].baseSize = sellOrder.baseSize;
+
+              buyOrder.baseSize = buyOrder.baseSize.minus(amount);
+              buyOrders[i].baseSize = buyOrder.baseSize;
+            })
+            .then(() => console.log("✅ Orders matched ", sellOrder.id, buyOrder.id, "\n"))
+            .catch((e) => {
+              console.error(e.toString(), "\n");
+              console.log(sell_res, buy_res);
+              this.fails[sellOrder.id] = (this.fails[sellOrder.id] ?? 0) + 1;
+              this.fails[buyOrder.id] = (this.fails[buyOrder.id] ?? 0) + 1;
+            });
+          await sleep(100);
+          this.fails = {};
+        }
+      }
+    }
 
     await this.matchOrders(sellOrders, buyOrders);
   };
