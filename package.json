@@ -57,9 +57,10 @@
     "jest": "^29.0.3",
     "mobx": "^6.12.3",
     "node-cron": "^3.0.2",
+    "nodemon": "^3.1.0",
     "request": "^2.88.2",
+    "spark-ts-sdk": "git+https://github.com/compolabs/spark-ts-sdk#e38375b537ff0479bf5c5bd5097d5477a4d6b758",
     "ts-jest": "^29.0.1",
-    "tsdef": "^0.0.14",
-    "spark-ts-sdk": "git+https://github.com/compolabs/spark-ts-sdk#fbac3154720d2bafd2f2e01a18dd0e965fea7c95"
+    "tsdef": "^0.0.14"
   }
 }

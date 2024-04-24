@@ -1,8 +1,8 @@
 import { MARKET, PORT, PRIVATE_KEY } from "./config";
 import { app } from "./app";
 import { Wallet, sleep } from "fuels";
-import Spark, { BN } from "spark-ts-sdk";
-import { NETWORK, CONTRACT_ADDRESSES, INDEXER_URL, TOKENS_BY_SYMBOL } from "./constants";
+import Spark, { BETA_CONTRACT_ADDRESSES, BETA_NETWORK, BN } from "spark-ts-sdk";
+import { INDEXER_URL, TOKENS_BY_SYMBOL } from "./constants";
 import { SpotOrder } from "spark-ts-sdk/dist/interface";
 
 enum STATUS {
@@ -20,8 +20,8 @@ class SparkMatcher {
     const wallet = Wallet.fromPrivateKey(PRIVATE_KEY);
 
     this.sdk = new Spark({
-      networkUrl: NETWORK.url,
-      contractAddresses: CONTRACT_ADDRESSES,
+      networkUrl: BETA_NETWORK.url,
+      contractAddresses: BETA_CONTRACT_ADDRESSES,
       indexerApiUrl: INDEXER_URL,
       wallet,
     });
