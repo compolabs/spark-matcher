@@ -62,7 +62,7 @@ export class Fetch {
     ][];
     const searchParams = new URLSearchParams(validParams);
     const data = await axios
-      .get(`${INDEXER_URL}/orders?${searchParams.toString()}`)
+      .get(`${INDEXER_URL}/spot/orders?${searchParams.toString()}`)
       .then((res) => res.data);
 
     const orders: SpotMarketOrder[] = data.map((order: any) => {
