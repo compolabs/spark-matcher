@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.8.10",
-    "@compolabs/spark-ts-sdk": "^0.0.2",
+    "@compolabs/spark-ts-sdk": "^0.0.4",
     "@ethersproject/bignumber": "^5.7.0",
     "@fuel-ts/wallet": "^0.69.1",
     "@types/request": "^2.48.8",

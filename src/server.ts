@@ -1,6 +1,6 @@
 import { MARKET, PORT, PRIVATE_KEY } from "./config";
 import { app } from "./app";
-import { Wallet, sleep } from "fuels";
+import { Provider, Wallet, sleep } from "fuels";
 import { INDEXER_URL, TOKENS_BY_SYMBOL } from "./constants";
 import Spark, { BETA_NETWORK, BETA_CONTRACT_ADDRESSES, BN } from "@compolabs/spark-ts-sdk";
 
@@ -16,16 +16,21 @@ class SparkMatcher {
   fails: Record<string, number> = {};
 
   constructor() {
-    const wallet = Wallet.fromPrivateKey(PRIVATE_KEY);
-
     this.sdk = new Spark({
       networkUrl: BETA_NETWORK.url,
       contractAddresses: BETA_CONTRACT_ADDRESSES,
       indexerApiUrl: INDEXER_URL,
-      wallet,
     });
 
-    this.initialized = true;
+    new Promise(async (resolve) => {
+      const provider = await Provider.create(BETA_NETWORK.url);
+      const wallet = Wallet.fromPrivateKey(PRIVATE_KEY, provider);
+      this.sdk.setActiveWallet(wallet);
+      resolve(true);
+    }).then(() => {
+      console.log("🐅 Spark Matcher is ready to spark match!");
+      this.initialized = true;
+    });
   }
 
   run() {
