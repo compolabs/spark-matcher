@@ -33,11 +33,12 @@
     "eslint-config-prettier": "^6.12.0",
     "eslint-plugin-prettier": "^3.1.4",
     "prettier": "^2.8.8",
-    "ts-node": "^10.9.1",
+    "ts-node": "^10.9.2",
     "typescript": "^4.9.5"
   },
   "dependencies": {
     "@apollo/client": "^3.8.10",
+    "@compolabs/spark-ts-sdk": "^0.0.2",
     "@ethersproject/bignumber": "^5.7.0",
     "@fuel-ts/wallet": "^0.69.1",
     "@types/request": "^2.48.8",
@@ -59,7 +60,6 @@
     "node-cron": "^3.0.2",
     "nodemon": "^3.1.0",
     "request": "^2.88.2",
-    "spark-ts-sdk": "git+https://github.com/compolabs/spark-ts-sdk#e38375b537ff0479bf5c5bd5097d5477a4d6b758",
     "ts-jest": "^29.0.1",
     "tsdef": "^0.0.14"
   }
