@@ -1,4 +1,4 @@
-import { BETA_TOKENS } from "spark-ts-sdk";
+import { BETA_TOKENS } from "@compolabs/spark-ts-sdk";
 
 interface Asset {
   address: string;
