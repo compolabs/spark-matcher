@@ -68,7 +68,6 @@ class SparkMatcher {
     for (let i = 0; i < sellOrders.length; ++i) {
       const sellOrder = sellOrders[i];
       if (sellOrder.baseSize.eq(0)) continue;
-
       if (this.fails[sellOrder.id] > 5) {
         // console.log("⚠️ skipped because of a lot of fails");
         continue;
