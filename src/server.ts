@@ -3,6 +3,7 @@ import { app } from "./app";
 import { Provider, Wallet, sleep } from "fuels";
 import { INDEXER_URL, TOKENS_BY_SYMBOL } from "./constants";
 import Spark, { BETA_NETWORK, BETA_CONTRACT_ADDRESSES, BN } from "@compolabs/spark-ts-sdk";
+require('dotenv').config();
 
 enum STATUS {
   ACTIVE,
@@ -14,12 +15,11 @@ class SparkMatcher {
   initialized = false;
   private status = STATUS.CHILL;
   fails: Record<string, number> = {};
-
   constructor() {
     this.sdk = new Spark({
       networkUrl: BETA_NETWORK.url,
-      contractAddresses: BETA_CONTRACT_ADDRESSES,
-      indexerApiUrl: INDEXER_URL,
+      contractAddresses: { ...BETA_CONTRACT_ADDRESSES, spotMarket: process.env.SPOT_MARKET_ID },
+      indexerApiUrl: process.env.INDEXER_API_URL,
     });
 
     new Promise(async (resolve) => {
