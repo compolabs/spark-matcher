@@ -1,1 +1,24 @@
+name: Manual Remote SSH Command
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Command to run on the server'
+        required: true
+        default: 'echo Hello, World!'
+
+jobs:
+  execute_command:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-private-key: ${{ secrets.SSH_KEY }}
+
+    - name: Connect to server and execute command
+      run: ssh -o StrictHostKeyChecking=no username@server_ip_address "${{ github.event.inputs.command }}"
 
