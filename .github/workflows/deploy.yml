@@ -1,0 +1,22 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      # - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Docker Deploy
+      run: |
+        ssh -o "StrictHostKeyChecking=no" ubuntu@15.236.36.30 "cd spark-matcher && git pull && docker run --restart=always -d spot-market-matcher-fuel-btc"
