@@ -20,3 +20,4 @@ jobs:
     - name: Docker Deploy
       run: |
         ssh -o "StrictHostKeyChecking=no" ubuntu@15.236.36.30 "cd spark-matcher && git pull && docker run --restart=always -d spot-market-matcher-fuel-btc"
+
