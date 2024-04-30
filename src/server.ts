@@ -18,8 +18,8 @@ class SparkMatcher {
   constructor() {
     this.sdk = new Spark({
       networkUrl: BETA_NETWORK.url,
-      contractAddresses: { ...BETA_CONTRACT_ADDRESSES, spotMarket: process.env.SPOT_MARKET_ID },
-      indexerApiUrl: process.env.INDEXER_API_URL,
+      contractAddresses: { ...BETA_CONTRACT_ADDRESSES, spotMarket: `${process.env.SPOT_MARKET_ID}` },
+      indexerApiUrl: `${process.env.INDEXER_API_URL}`,
     });
 
     new Promise(async (resolve) => {
