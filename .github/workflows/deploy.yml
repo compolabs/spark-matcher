@@ -15,5 +15,10 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
     
-    - name: SSH Command
-      run: ssh ubuntu@15.236.36.30 
+    - name: Setup SSH known_hosts
+      run: |
+       mkdir -p ~/.ssh
+       ssh-keyscan -H 15.236.36.30 >> ~/.ssh/known_hosts
+
+    - name: SSH Commands
+      run: ssh -o StrictHostKeyChecking=yes ubuntu@15.236.36.30 'echo "Hello, World!"' 
