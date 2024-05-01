@@ -21,4 +21,4 @@ jobs:
        ssh-keyscan -H 15.236.36.30 >> ~/.ssh/known_hosts
 
     - name: SSH Commands
-      run: ssh -o StrictHostKeyChecking=yes ubuntu@15.236.36.30 'echo "Hello, World!"' 
+      run: ssh -o StrictHostKeyChecking=yes ubuntu@15.236.36.30 'mkdir guf' 
