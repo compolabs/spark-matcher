@@ -23,5 +23,4 @@ jobs:
     - name: SSH Commands
       run: ssh -o StrictHostKeyChecking=yes ubuntu@15.236.36.30 '
        cd spark-matcher
-       git pull
-      ' 
+       git pull' 
