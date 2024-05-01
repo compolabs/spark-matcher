@@ -23,6 +23,17 @@ jobs:
       - name: SSH Commands
         run: |
           ssh -o StrictHostKeyChecking=yes ubuntu@15.236.36.30 '
-           cd spark-matcher
-           git pull
+          cd spark-matcher
+          git pull
+          # Запуск нового контейнера
+          docker run --restart=always -d --name spot-market-matcher-fuel-btc-new spot-market-matcher-fuel-btc
+          # Проверка, успешно ли запущен новый контейнер
+          if [ $(docker ps -q -f name=spot-market-matcher-fuel-btc-new) ]; then
+          echo "New container started successfully. Removing old container."
+          # Остановка и удаление старого контейнера
+          docker stop spot-market-matcher-fuel-btc || true
+          docker rm spot-market-matcher-fuel-btc || true
+          else
+          echo "Failed to start new container. Keeping the old one."
+          fi 
           '
