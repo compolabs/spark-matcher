@@ -7,20 +7,22 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.5.3
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-    
-    - name: Setup SSH known_hosts
-      run: |
-       mkdir -p ~/.ssh
-       ssh-keyscan -H 15.236.36.30 >> ~/.ssh/known_hosts
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: SSH Commands
-      run: ssh -o StrictHostKeyChecking=yes ubuntu@15.236.36.30 '
-       cd spark-matcher
-       git pull' 
+      - name: Setup SSH known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 15.236.36.30 >> ~/.ssh/known_hosts
+
+      - name: SSH Commands
+        run: |
+          ssh -o StrictHostKeyChecking=yes ubuntu@15.236.36.30 '
+           cd spark-matcher
+           git pull
+          '
