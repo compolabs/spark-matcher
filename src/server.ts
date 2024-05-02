@@ -1,4 +1,4 @@
-import { MARKET, PORT, PRIVATE_KEY } from "./config";
+import { INDEXER_API_URL, MARKET, PORT, PRIVATE_KEY, SPOT_MARKET_ID } from "./config";
 import { app } from "./app";
 import { Provider, Wallet, sleep } from "fuels";
 import { INDEXER_URL, TOKENS_BY_SYMBOL } from "./constants";
@@ -18,8 +18,8 @@ class SparkMatcher {
   constructor() {
     this.sdk = new Spark({
       networkUrl: BETA_NETWORK.url,
-      contractAddresses: { ...BETA_CONTRACT_ADDRESSES, spotMarket: `${process.env.SPOT_MARKET_ID}` },
-      indexerApiUrl: `${process.env.INDEXER_API_URL}`,
+      contractAddresses: { ...BETA_CONTRACT_ADDRESSES, spotMarket: `${SPOT_MARKET_ID}` },
+      indexerApiUrl: `${INDEXER_API_URL}`,
     });
 
     new Promise(async (resolve) => {
