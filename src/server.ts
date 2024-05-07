@@ -96,12 +96,14 @@ class SparkMatcher {
           if (buy_res == null) {
             console.log("👽 Phantom order buy: " + buyOrder.id, "\n");
             buyOrders[i].baseSize = new BN(0);
+            buyOrder.baseSize = new BN(0);
             this.fails[buyOrder.id] = (this.fails[buyOrder.id] ?? 0) + 1;
             continue;
           }
           if (sell_res == null) {
             console.log("👽 Phantom order sell: " + sellOrder.id, "\n");
             sellOrders[i].baseSize = new BN(0);
+            sellOrder.baseSize = new BN(0);
             this.fails[sellOrder.id] = (this.fails[sellOrder.id] ?? 0) + 1;
             continue;
           }
