@@ -1,9 +1,8 @@
 import { INDEXER_API_URL, MARKET, PORT, PRIVATE_KEY, SPOT_MARKET_ID } from "./config";
 import { app } from "./app";
 import { Provider, Wallet, sleep } from "fuels";
-import { INDEXER_URL, TOKENS_BY_SYMBOL } from "./constants";
+import { TOKENS_BY_SYMBOL } from "./constants";
 import Spark, { BETA_NETWORK, BETA_CONTRACT_ADDRESSES, BN } from "@compolabs/spark-ts-sdk";
-require('dotenv').config();
 
 enum STATUS {
   ACTIVE,
@@ -15,6 +14,7 @@ class SparkMatcher {
   initialized = false;
   private status = STATUS.CHILL;
   fails: Record<string, number> = {};
+
   constructor() {
     this.sdk = new Spark({
       networkUrl: BETA_NETWORK.url,
@@ -28,13 +28,13 @@ class SparkMatcher {
       this.sdk.setActiveWallet(wallet);
       resolve(true);
     }).then(() => {
-      console.log("🐅 Spark Matcher is ready to spark match!");
+      console.log("🐅 Spark Matcher is ready to spark match!\n\n ");
       this.initialized = true;
     });
   }
 
   run() {
-    this.processNext(); // Запускаем первый процесс
+    this.processNext();
   }
 
   private async processNext() {
@@ -44,21 +44,18 @@ class SparkMatcher {
     }
     if (this.status === STATUS.ACTIVE) {
       console.log("🍃 Last process is still active. Waiting for it to complete.");
-      setTimeout(() => this.processNext(), 100); // Проверяем состояние каждую секунду
+      setTimeout(() => this.processNext(), 100);
       return;
     }
 
     this.status = STATUS.ACTIVE;
     try {
-      // const startTime = Date.now();
       await this.doMatch();
-      // this.lastIterationDuration = (Date.now() - startTime) / 1000;
     } catch (error) {
       console.error("An error occurred:", error);
       await sleep(50000);
     } finally {
       this.status = STATUS.CHILL;
-      // console.log("✅ Process completed. Starting next one.");
       this.processNext();
     }
   }
@@ -97,13 +94,13 @@ class SparkMatcher {
           ]);
 
           if (buy_res == null) {
-            console.log("👽 Phantom order buy: " + buyOrder.id);
+            console.log("👽 Phantom order buy: " + buyOrder.id, "\n");
             buyOrders[i].baseSize = new BN(0);
             this.fails[buyOrder.id] = (this.fails[buyOrder.id] ?? 0) + 1;
             continue;
           }
           if (sell_res == null) {
-            console.log("👽 Phantom order sell: " + sellOrder.id);
+            console.log("👽 Phantom order sell: " + sellOrder.id, "\n");
             sellOrders[i].baseSize = new BN(0);
             this.fails[sellOrder.id] = (this.fails[sellOrder.id] ?? 0) + 1;
             continue;
@@ -122,8 +119,11 @@ class SparkMatcher {
             })
             .then(() => console.log("✅ Orders matched ", sellOrder.id, buyOrder.id, "\n"))
             .catch((e) => {
-              console.error(e.toString(), "\n");
-              console.log(sell_res, buy_res);
+              console.error("⚠️", e.toString(), "\n", sell_res.id, buy_res.id, "\n");
+              // console.log(
+              // { ...sell_res, baseSize: sell_res.baseSize.toString(), orderPrice: sell_res.orderPrice.toString()},
+              // { ...buy_res, baseSize: buy_res.baseSize.toString(), orderPrice: buy_res.orderPrice.toString(),},
+              // );
               this.fails[sellOrder.id] = (this.fails[sellOrder.id] ?? 0) + 1;
               this.fails[buyOrder.id] = (this.fails[buyOrder.id] ?? 0) + 1;
             });
