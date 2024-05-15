@@ -129,7 +129,7 @@ class SparkMatcher {
               this.fails[sellOrder.id] = (this.fails[sellOrder.id] ?? 0) + 1;
               this.fails[buyOrder.id] = (this.fails[buyOrder.id] ?? 0) + 1;
             });
-          await sleep(500);
+          await sleep(100);
           this.fails = {};
         }
       }
